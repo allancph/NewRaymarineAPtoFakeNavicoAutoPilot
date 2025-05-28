@@ -16,12 +16,16 @@ module.exports.deviceAddress = deviceAddress;
 
 debug('deviceAddress: %j', deviceAddress)
 
+const myEmulatedDevice = new CanDevice(canbus, { preferredAddress: parseInt(deviceAddress, 10) });
+myEmulatedDevice.start();
+
 require('./canboatjs')
 require('./canboatjs/lib/canbus')
-const canDevice = require('./canboatjs/lib/canbus').canDevice
+// const canDevice = require('./canboatjs/lib/canbus').canDevice
 // const device = require('./canboatjs/lib/candevice').device
-const canbus = new (require('./canboatjs').canbus)({})
+const canbus = new (require('./canboatjs').canbus)({ fromStdIn: true });
 const util = require('util')
+const CanDevice = require('./canboatjs/lib/candevice');
 
 var pilot_state = 'standby';
 var ac12mode = 'headinghold';
@@ -109,7 +113,7 @@ switch (emulate) {
         debug('Key not mapped: %s', key.name);
       }
       if (typeof button != 'undefined') {
-        msg = util.format(op10msg, (new Date()).toISOString(), canbus.candevice.address, hexByte(canbus.candevice.address), op10_key_code[button]);
+        msg = util.format(op10msg, (new Date()).toISOString(), myEmulatedDevice.address, hexByte(myEmulatedDevice.address), op10_key_code[button]);
         // debug('Sending pgn: %s', msg);
         canbus.sendPGN(msg)
       }
@@ -288,7 +292,7 @@ function changeHeading(app, deviceid, command_json)
   return n2k_msgs
 }
 
-debug('Using device id: %i', canbus.candevice.address)
+debug('Using device id: %i', myEmulatedDevice.address)
 
 // Generic functions
 function buf2hex(buffer) { // buffer is an ArrayBuffer
@@ -325,7 +329,7 @@ function heartbeat () {
   if (heartbeatSequencenumber > 600) {
     heartbeatSequencenumber = 1
   }
-  msg = util.format(heartbeat_msg, (new Date()).toISOString(), canbus.candevice.address, hexByte(heartbeatSequencenumber))
+  msg = util.format(heartbeat_msg, (new Date()).toISOString(), myEmulatedDevice.address, hexByte(heartbeatSequencenumber))
   canbus.sendPGN(msg)
 }
 
@@ -340,7 +344,7 @@ async function PGN130822 () {
     "%s,3,130822,%s,255,0f,13,99,ff,01,00,0d,00,00,fc,13,25,00,00,74,be",
     "%s,3,130822,%s,255,0f,13,99,ff,01,00,0e,00,00,fc,13,25,00,00,74,be" ]
   for (var nr in messages) {
-    msg = util.format(messages[nr], (new Date()).toISOString(), canbus.candevice.address)
+    msg = util.format(messages[nr], (new Date()).toISOString(), myEmulatedDevice.address)
     canbus.sendPGN(msg)
     await sleep(1000)
   }
@@ -348,13 +352,13 @@ async function PGN130822 () {
 
 function AC12_PGN130860 () {
   const message = "%s,7,130860,%s,255,21,13,99,ff,ff,ff,ff,7f,ff,ff,ff,7f,ff,ff,ff,ff,ff,ff,ff,7f,ff,ff,ff,7f"
-  msg = util.format(message, (new Date()).toISOString(), canbus.candevice.address)
+  msg = util.format(message, (new Date()).toISOString(), myEmulatedDevice.address)
   canbus.sendPGN(msg)
 }
 
 function AC12_PGN130850 () {
   const message = "%s,2,130850,%s,255,0c,41,9f,ff,ff,64,00,2b,00,ff,ff,ff,ff,ff"
-  msg = util.format(message, (new Date()).toISOString(), canbus.candevice.address)
+  msg = util.format(message, (new Date()).toISOString(), myEmulatedDevice.address)
   canbus.sendPGN(msg)
 }
 
@@ -366,7 +370,7 @@ function AC12_PGN127250 () {
   magnetic_heading = Math.trunc(degsToRad(heading) * 10000)
   // debug ("heading_true_rad: %s  variation: %s", true_heading, mag_variation);
   heading_hex = padd((magnetic_heading & 0xff).toString(16), 2) + "," + padd(((magnetic_heading >> 8) & 0xff).toString(16), 2)
-  msg = util.format(message, (new Date()).toISOString(), canbus.candevice.address, heading_hex)
+  msg = util.format(message, (new Date()).toISOString(), myEmulatedDevice.address, heading_hex)
   canbus.sendPGN(msg)
 }
 
@@ -380,20 +384,20 @@ function AC12_PGN65341 () {
     // debug ("wind_target_hex: %s wind_deg: %s", wind_target_hex, wind_target_deg);
     // B&G Wind target PGN
     const message = "%s,6,65341,%s,255,8,41,9f,ff,ff,03,ff,%s"
-    msg = util.format(message, (new Date()).toISOString(), canbus.candevice.address, wind_target_hex)
+    msg = util.format(message, (new Date()).toISOString(), myEmulatedDevice.address, wind_target_hex)
     canbus.sendPGN(msg)
   }
 }
 
 function AC12_PGN127245 () {
   const message = "%s,2,127245,%s,255,8,%s"
-  msg = util.format(message, (new Date()).toISOString(), canbus.candevice.address, rudder_pgn_data)
+  msg = util.format(message, (new Date()).toISOString(), myEmulatedDevice.address, rudder_pgn_data)
   canbus.sendPGN(msg)
 }
 
 function AC12_PGN128275 (log_pgn_data) {
   const message = "%s,2,128275,%s,255,8,%s"
-  msg = util.format(message, (new Date()).toISOString(), canbus.candevice.address, log_pgn_data)
+  msg = util.format(message, (new Date()).toISOString(), myEmulatedDevice.address, log_pgn_data)
   canbus.sendPGN(msg)
 }
 
@@ -409,21 +413,21 @@ function AC12_PGN127237 () {
   if (ac12state == 'engaged') {
     switch (ac12mode) {
       case 'navigation':
-        var msg = util.format(heading_track_pgn[ac12mode], (new Date()).toISOString(), canbus.candevice.address,255, cts_rad, heading_rad)
+        var msg = util.format(heading_track_pgn[ac12mode], (new Date()).toISOString(), myEmulatedDevice.address,255, cts_rad, heading_rad)
         canbus.sendPGN(msg);
         break;
       case 'headinghold':
-        var msg = util.format(heading_track_pgn[ac12mode], (new Date()).toISOString(), canbus.candevice.address,255, locked_heading_rad, heading_rad)
+        var msg = util.format(heading_track_pgn[ac12mode], (new Date()).toISOString(), myEmulatedDevice.address,255, locked_heading_rad, heading_rad)
         canbus.sendPGN(msg);
         break;
       case 'wind':
       case 'windnavigation':
-        var msg = util.format(heading_track_pgn[ac12mode], (new Date()).toISOString(), canbus.candevice.address,255, locked_heading_rad, heading_rad)
+        var msg = util.format(heading_track_pgn[ac12mode], (new Date()).toISOString(), myEmulatedDevice.address,255, locked_heading_rad, heading_rad)
         canbus.sendPGN(msg);
         break;
     }
   } else {
-    var msg = util.format(heading_track_pgn['standby'], (new Date()).toISOString(), canbus.candevice.address, 255, heading_rad)
+    var msg = util.format(heading_track_pgn['standby'], (new Date()).toISOString(), myEmulatedDevice.address, 255, heading_rad)
     canbus.sendPGN(msg);
   }
 }
@@ -433,7 +437,7 @@ async function OP10_PGN65305 () {
     "%s,7,65305,%s,255,8,41,9f,01,0b,00,00,00,00",
     "%s,7,65305,%s,255,8,41,9f,01,03,04,00,00,00" ]
   for (var nr in messages) {
-    msg = util.format(messages[nr], (new Date()).toISOString(), canbus.candevice.address)
+    msg = util.format(messages[nr], (new Date()).toISOString(), myEmulatedDevice.address)
     canbus.sendPGN(msg)
     await sleep(25)
   }
@@ -444,7 +448,7 @@ async function AP44_PGN65305 () {
     "%s,7,65305,%s,255,8,41,9f,01,03,00,00,00,00",
     "%s,7,65305,%s,255,8,41,9f,01,0b,00,00,00,00" ]
   for (var nr in messages) {
-    msg = util.format(messages[nr], (new Date()).toISOString(), canbus.candevice.address)
+    msg = util.format(messages[nr], (new Date()).toISOString(), myEmulatedDevice.address)
     canbus.sendPGN(msg)
     await sleep(500)
   }
@@ -491,7 +495,7 @@ async function AC12_PGN65340 () {
     pgn65302[ac12mode] ]
 
   for (var nr in messages) {
-    msg = util.format(messages[nr], (new Date()).toISOString(), canbus.candevice.address)
+    msg = util.format(messages[nr], (new Date()).toISOString(), myEmulatedDevice.address)
     canbus.sendPGN(msg)
     await sleep(25)
   }
@@ -499,7 +503,7 @@ async function AC12_PGN65340 () {
 
 function AC12_PGN65341_1s () {
   const message = "%s,6,65341,%s,255,8,41,9f,ff,ff,0d,ff,ff,7f";
-  msg = util.format(message, (new Date()).toISOString(), canbus.candevice.address)
+  msg = util.format(message, (new Date()).toISOString(), myEmulatedDevice.address)
   canbus.sendPGN(msg)
 }
 
@@ -509,7 +513,7 @@ async function AC12_PGN65341_5s () {
     "%s,6,65341,%s,255,8,41,9f,ff,ff,0c,ff,ff,ff",
     "%s,6,65341,%s,255,8,41,9f,ff,ff,02,ff,ff,ff" ]
   for (var nr in messages) {
-    msg = util.format(messages[nr], (new Date()).toISOString(), canbus.candevice.address)
+    msg = util.format(messages[nr], (new Date()).toISOString(), myEmulatedDevice.address)
     canbus.sendPGN(msg)
     await sleep(25)
   }
@@ -524,7 +528,7 @@ function AC12_PGN65341_02 () {
       "followup":   "%s,6,65341,%s,255,8,41,9f,ff,ff,02,ff,14,9a", // guess
       "standby":    "%s,6,65341,%s,255,8,41,9f,ff,ff,02,ff,ff,ff"
   }
-  msg = util.format(pgn65341_02[ac12mode], (new Date()).toISOString(), canbus.candevice.address)
+  msg = util.format(pgn65341_02[ac12mode], (new Date()).toISOString(), myEmulatedDevice.address)
   canbus.sendPGN(msg)
 }
 
@@ -612,7 +616,7 @@ async function AC12_PGN65305 () {
     lastac12mode = ac12mode
   }
   for (var message in messages) {
-    msg = util.format(messages[message], (new Date()).toISOString(), canbus.candevice.address)
+    msg = util.format(messages[message], (new Date()).toISOString(), myEmulatedDevice.address)
     canbus.sendPGN(msg)
     msg = msg.replace(/.*255,8,41,9f,00,/, '');
     msgbin = "";
@@ -677,7 +681,7 @@ function mainLoop () {
         debug('ISO request: %j', msg);
         debug('ISO request from %d to %d Data PGN: %i', msg.pgn.src, msg.pgn.dst, PGN);
         msg.pgn.fields.PGN = PGN;
-        canbus.candevice.n2kMessage(msg.pgn);
+        myEmulatedDevice.n2kMessage(msg.pgn);
       }
       switch (emulate) {
         case 'op10keypad':
@@ -747,7 +751,7 @@ function mainLoop () {
               // Send Seatalk Button
               if (typeof key_button != 'undefined' && key_button) {
                   debug('Setting Seatalk1 pilot mode %s', key_button);
-                  pgn126720 = util.format(raymarine_key_command, (new Date()).toISOString(), canbus.candevice.address, autopilot_dst, raymarine_key_code[key_button]);
+                  pgn126720 = util.format(raymarine_key_command, (new Date()).toISOString(), myEmulatedDevice.address, autopilot_dst, raymarine_key_code[key_button]);
                   debug('Sending Seatalk key button pgn 126720 %j', pgn126720);
                   canbus.sendPGN(pgn126720);
                   delete key_button;
@@ -756,37 +760,37 @@ function mainLoop () {
               if (typeof state_button != 'undefined' && state_button) {
                   if (state_button == 'engage') {
                     debug('B&G button Engage pressed. Engaging mode %s', ac12mode)
-                    pgn126720 = util.format(raymarine_state_command, (new Date()).toISOString(), canbus.candevice.address, autopilot_dst, raymarine_state_code[ac12mode]);
+                    pgn126720 = util.format(raymarine_state_command, (new Date()).toISOString(), myEmulatedDevice.address, autopilot_dst, raymarine_state_code[ac12mode]);
                     debug('Sending Seatalk key state pgn 126720 %j', pgn126720);
                     canbus.sendPGN(pgn126720);
                   } else if (state_button == 'headinghold') {
                     debug('B&G button Engage pressed. Engaging mode %s', ac12mode)
-                    pgn126720 = util.format(raymarine_state_command, (new Date()).toISOString(), canbus.candevice.address, autopilot_dst, raymarine_state_code['headinghold']);
+                    pgn126720 = util.format(raymarine_state_command, (new Date()).toISOString(), myEmulatedDevice.address, autopilot_dst, raymarine_state_code['headinghold']);
                     debug('Sending Seatalk key state pgn 126720 %j', pgn126720);
                     canbus.sendPGN(pgn126720);
                   } else if (state_button == 'wind') {
                     debug('B&G button Standby pressed. Wind in mode %s', ac12mode)
-                    pgn126720 = util.format(raymarine_state_command, (new Date()).toISOString(), canbus.candevice.address, autopilot_dst, raymarine_state_code['wind']);
+                    pgn126720 = util.format(raymarine_state_command, (new Date()).toISOString(), myEmulatedDevice.address, autopilot_dst, raymarine_state_code['wind']);
                     debug('Sending Seatalk key state pgn 126720 %j', pgn126720);
                     canbus.sendPGN(pgn126720);
                   } else if (state_button == 'nodrift') {
                     debug('B&G button NoDrift pressed.', ac12mode)
-                    pgn126720 = util.format(raymarine_state_command, (new Date()).toISOString(), canbus.candevice.address, autopilot_dst, raymarine_state_code['headinghold']);
+                    pgn126720 = util.format(raymarine_state_command, (new Date()).toISOString(), myEmulatedDevice.address, autopilot_dst, raymarine_state_code['headinghold']);
                     debug('Sending Seatalk key state pgn 126720 %j', pgn126720);
                     canbus.sendPGN(pgn126720);
                   } else if (state_button == 'navigation') {
                     debug('B&G button Navigation pressed. Navigation in state %s', ac12state)
                     if (ac12state == 'standby') {
                       debug('Going to Heading Hold first')
-                      pgn126720 = util.format(raymarine_state_command, (new Date()).toISOString(), canbus.candevice.address, autopilot_dst, raymarine_state_code['headinghold']);
+                      pgn126720 = util.format(raymarine_state_command, (new Date()).toISOString(), myEmulatedDevice.address, autopilot_dst, raymarine_state_code['headinghold']);
                       canbus.sendPGN(pgn126720);
                     }
-                    pgn126720 = util.format(raymarine_state_command, (new Date()).toISOString(), canbus.candevice.address, autopilot_dst, raymarine_state_code['navigation']);
+                    pgn126720 = util.format(raymarine_state_command, (new Date()).toISOString(), myEmulatedDevice.address, autopilot_dst, raymarine_state_code['navigation']);
                     debug('Sending Seatalk key state pgn 126720 %j', pgn126720);
                     canbus.sendPGN(pgn126720);
                   } else if (state_button == 'standby') {
                     debug('B&G button Standby pressed. Standby in mode %s', ac12mode)
-                    pgn126720 = util.format(raymarine_state_command, (new Date()).toISOString(), canbus.candevice.address, autopilot_dst, raymarine_state_code['standby']);
+                    pgn126720 = util.format(raymarine_state_command, (new Date()).toISOString(), myEmulatedDevice.address, autopilot_dst, raymarine_state_code['standby']);
                     debug('Sending Seatalk key state pgn 126720 %j', pgn126720);
                     canbus.sendPGN(pgn126720);
                   }
@@ -798,7 +802,7 @@ function mainLoop () {
               pgn130851_size = pgn130850[0];
               pgn130851_size_int = parseInt(pgn130850[0], 16);
               pgn130851 = "%s,7,130851,%s,255," + pgn130851_size + "," + (pgn130850.slice(1,pgn130851_size_int + 1)).join(',');
-              pgn130851 = util.format(pgn130851, (new Date()).toISOString(), canbus.candevice.address)
+              pgn130851 = util.format(pgn130851, (new Date()).toISOString(), myEmulatedDevice.address)
               // debug('Sending reply 130851 %j', pgn130851);
               canbus.sendPGN(pgn130851)
               pgn130850 = [];
@@ -957,7 +961,7 @@ function mainLoop () {
                   PGN130845_reply = PGN130845.substring(14,500)
                 }
                 PGN130845_reply = "%s,3,130845,%s,255," + PGN130845_reply;
-                PGN130845_reply = util.format(PGN130845_reply, (new Date()).toISOString(), canbus.candevice.address)
+                PGN130845_reply = util.format(PGN130845_reply, (new Date()).toISOString(), myEmulatedDevice.address)
                 // debug('PGN130845 reply: %s', PGN130845_reply)
                 canbus.sendPGN(PGN130845_reply)
                 pgn130845 = [];
@@ -971,13 +975,4 @@ function mainLoop () {
   setTimeout(mainLoop, 50)
 }
 
-// Wait for cansend
-function waitForSend () {
-  if (canbus.candevice.cansend) {
-    mainLoop()
-    return
-  }
-  setTimeout (waitForSend, 500)
-}
-
-waitForSend()
+setTimeout(mainLoop, 50);

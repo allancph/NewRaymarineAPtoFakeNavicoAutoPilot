@@ -199,6 +199,11 @@ CanbusStream.prototype.sendPGN = function (msg) {
         var str = toActisenseSerialFormat(msg.pgn, toPgn(msg), msg.dst, msg.src)
         this.socketCanWriter.stdin.write(str + '\n')
       }
+    } else if (this.options.fromStdIn) {
+      // When fromStdIn is true, output JSON strings to stdout for Signal K
+      // 'pgn_object' here is the first argument to sendPGN, which should be the PGN data.
+      // In CanDevice, it calls this.canbus.sendPGN(pgn_object_to_send)
+      process.stdout.write(JSON.stringify(msg) + '\\n');
     } else if ( this.channel  ) {
       var canid
       var buffer
