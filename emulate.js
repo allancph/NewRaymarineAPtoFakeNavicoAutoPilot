@@ -1,9 +1,12 @@
+console.log('[emulate.js] Script executing now...');
+console.log('[emulate.js] Raw process.argv:', process.argv.join(' '));
 const debug = require('debug')('emulate');
 
 var myArgs = process.argv.slice(2);
 const emulate = myArgs[0] || 'AC12';
 const emulate_init_path = './device/' + emulate + '.js'; // Use a distinct name
 const deviceAddressCmdLine = myArgs[1]; // Use a distinct name
+console.log(`[emulate.js] Arg emulate: ${emulate}, Arg deviceAddressCmdLine: ${deviceAddressCmdLine}`);
 
 // Load the device-specific configuration first
 const deviceConfig = require(emulate_init_path); 
