@@ -1,32 +1,36 @@
-const debug = require('debug')('emulate')
+const debug = require('debug')('emulate');
 
 var myArgs = process.argv.slice(2);
-const emulate = myArgs[0] || 'AC12'
-const emulate_init = './device/' + emulate + '.js'
+const emulate = myArgs[0] || 'AC12';
+const emulate_init_path = './device/' + emulate + '.js'; // Use a distinct name
+const deviceAddressCmdLine = myArgs[1]; // Use a distinct name
 
-// Load device specific init info
-debug('Loading %s', emulate_init)
-require(emulate_init)
-const defaultTransmitPGNs = require(emulate_init).defaultTransmitPGNs
-module.exports.defaultTransmitPGNs = defaultTransmitPGNs
+// Load the device-specific configuration first
+const deviceConfig = require(emulate_init_path); 
+const defaultTransmitPGNsFromConfig = deviceConfig.defaultTransmitPGNs;
 
-const deviceAddress = myArgs[1];
-//  const deviceAddress = require(emulate_init).deviceAddress;
-module.exports.deviceAddress = deviceAddress;
+// Now, require the necessary modules
+const CanDevice = require('./canboatjs/lib/candevice');
+const CanboatJSIndex = require('./canboatjs'); // For accessing exports like 'canbus' constructor
+const util = require('util');
 
-debug('deviceAddress: %j', deviceAddress)
+debug('Emulate type: %s, Device Address from cmd: %s', emulate, deviceAddressCmdLine);
 
-const myEmulatedDevice = new CanDevice(canbus, { preferredAddress: parseInt(deviceAddress, 10) });
+// Create the canbus instance (this uses the constructor from canboatjs/index.js)
+const canbus = new CanboatJSIndex.canbus({ fromStdIn: true });
+
+// Create and start your emulated device
+const myEmulatedDevice = new CanDevice(canbus, {
+  preferredAddress: parseInt(deviceAddressCmdLine, 10),
+  transmitPGNs: defaultTransmitPGNsFromConfig
+});
 myEmulatedDevice.start();
 
-require('./canboatjs')
-require('./canboatjs/lib/canbus')
-// const canDevice = require('./canboatjs/lib/canbus').canDevice
-// const device = require('./canboatjs/lib/candevice').device
-const canbus = new (require('./canboatjs').canbus)({ fromStdIn: true });
-const util = require('util')
-const CanDevice = require('./canboatjs/lib/candevice');
+// These exports might be useful if other parts of your system require emulate.js
+module.exports.defaultTransmitPGNs = defaultTransmitPGNsFromConfig;
+module.exports.deviceAddress = deviceAddressCmdLine;
 
+// THE REST OF THE ORIGINAL SCRIPT FOLLOWS
 var pilot_state = 'standby';
 var ac12mode = 'headinghold';
 var lastac12mode = '';
