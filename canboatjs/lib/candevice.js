@@ -21,12 +21,6 @@ const Uint64LE = require('int64-buffer').Uint64LE
 const { getIndustryCode, getManufacturerCode, getDeviceClassCode } = require('./codes')
 const { toPgn } = require('./toPgn')
 
-const defaultTransmitPGNs = require ('../../emulate.js').defaultTransmitPGNs
-debug ('Candevice loaded PGNs (defaultTransmitPGNs): %j', defaultTransmitPGNs)
-var transmitPGNs = defaultTransmitPGNs
-
-const deviceAddress = require ('../../emulate.js').deviceAddress
-
 class CanDevice extends EventEmitter {
   constructor (canbus, options) {
     super()
@@ -40,16 +34,16 @@ class CanDevice extends EventEmitter {
     this.canbus = canbus
     this.options = _.isUndefined(options) ? {} : options
 
-    this.address = _.isUndefined(options.preferredAddress) ? deviceAddress : options.preferredAddress
+    this.address = _.isUndefined(options.preferredAddress) ? 253 : options.preferredAddress; // Default to 253 (unclaimed) if not passed
     this.cansend = false
     this.foundConflict = false
     this.devices = {}
 
-    this.transmitPGNs = defaultTransmitPGNs
-    if ( this.options.transmitPGNs ) {
-      this.transmitPGNs = _.union(this.transmitPGNs,
-                                  this.options.transmitPGNs)
+    this.transmitPGNs = []; // Initialize as empty
+    if (options.transmitPGNs) { // Check options.transmitPGNs directly
+      this.transmitPGNs = _.cloneDeep(options.transmitPGNs); // Use options.transmitPGNs
     }
+    debug('Candevice using PGNs (from options): %j', this.transmitPGNs);
 
     if ( options.app ) {
       options.app.on('N2KAnalyzerOut', this.n2kMessage.bind(this))
