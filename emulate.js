@@ -9,7 +9,7 @@ const deviceAddressCmdLine = myArgs[1]; // Use a distinct name
 console.log(`[emulate.js] Arg emulate: ${emulate}, Arg deviceAddressCmdLine: ${deviceAddressCmdLine}`);
 
 // Load the device-specific configuration first
-const deviceConfig = require(emulate_init_path); 
+const deviceConfig = require(emulate_init_path);
 const defaultTransmitPGNsFromConfig = deviceConfig.defaultTransmitPGNs;
 
 // Now, require the necessary modules
@@ -20,7 +20,7 @@ const util = require('util');
 debug('Emulate type: %s, Device Address from cmd: %s', emulate, deviceAddressCmdLine);
 
 // Create the canbus instance (this uses the constructor from canboatjs/index.js)
-const canbus = new CanboatJSIndex.canbus({ fromStdIn: true });
+const canbus = new CanboatJSIndex.canbus({});
 
 // Create and start your emulated device
 const myEmulatedDevice = new CanDevice(canbus, {
