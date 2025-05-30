@@ -1,6 +1,7 @@
 console.log('[emulate.js] Script executing now...');
 console.log('[emulate.js] Raw process.argv:', process.argv.join(' '));
 const debug = require('debug')('emulate');
+debug('DEBUG IS WORKING IN EMULATE.JS');
 
 var myArgs = process.argv.slice(2);
 const emulate = myArgs[0] || 'AC12';
@@ -19,6 +20,7 @@ const util = require('util');
 
 debug('Emulate type: %s, Device Address from cmd: %s', emulate, deviceAddressCmdLine);
 
+console.log('[emulate.js] About to create canbus instance...');
 // Create the canbus instance (this uses the constructor from canboatjs/index.js)
 const canbus = new CanboatJSIndex.canbus({});
 
