@@ -2,6 +2,7 @@ console.log('[emulate.js] Script executing now...');
 console.log('[emulate.js] Raw process.argv:', process.argv.join(' '));
 const debug = require('debug')('emulate');
 debug('DEBUG IS WORKING IN EMULATE.JS');
+console.log('[emulate.js] DEBUG IS WORKING (console.log test)');
 
 var myArgs = process.argv.slice(2);
 const emulate = myArgs[0] || 'AC12';

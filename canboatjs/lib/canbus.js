@@ -120,7 +120,9 @@ function CanbusStream (options) {
     })
   } else {
     try {
+      console.log('[CanbusStream] Trying to create raw channel:', canDevice); // ADD
       this.channel = socketcan.createRawChannel(canDevice);
+      console.log('[CanbusStream] Raw channel created:', canDevice); // ADD
       this.channel.addListener('onMessage', (msg) => {
         var pgn = parseCanId(msg.id)
 
@@ -134,15 +136,19 @@ function CanbusStream (options) {
         } else {
           that.push({ pgn, length: msg.data.length, data: msg.data })
         }
-      })
-      this.channel.start()
-      this.candevice = new CanDevice(this, options)
-      this.candevice.start()
+      });
+      console.log('[CanbusStream] Listener added. Starting channel...'); // ADD
+      this.channel.start();
+      console.log('[CanbusStream] Channel started. Creating CanDevice...'); // ADD
+      this.candevice = new CanDevice(this, options); // CanDevice is from require('./candevice')
+      console.log('[CanbusStream] CanDevice created. Starting CanDevice...'); // ADD
+      this.candevice.start();
+      console.log('[CanbusStream] CanDevice started.'); // ADD
       setProviderStatus('Connected')
     } catch (e) {
       setProviderError(e.message)
-      console.error(`unable to open canbus ${canDevice}: ${e}`)
-      console.error(e.stack)
+      console.error(`[CanbusStream] ERROR unable to open canbus ${canDevice}:`, e); // Ensure this line is present
+      console.error(e.stack); // Ensure this line is present
     }
   }
 }
