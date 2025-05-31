@@ -1,9 +1,10 @@
 // test_socketcan.js
 console.log('[TestScript] Starting test_socketcan.js...');
-console.log('[TestScript] Attempting to require socketcan from default paths...');
 
 try {
-    const sc = require('socketcan');
+    const socketcanPath = './canboatjs/node_modules/socketcan';
+    console.log(`[TestScript] Attempting to require socketcan from specific path: ${socketcanPath}`);
+    const sc = require(socketcanPath);
     console.log('[TestScript] require(\'socketcan\') successful.');
 
     console.log('[TestScript] Attempting to create raw channel \'can0\'...');
