@@ -14,16 +14,14 @@ var deviceAddress = 3;
 addressClaim = {
   pgn: 60928,
   dst: 255,
-  "Unique Number": 1751521,
-  "Manufacturer Code": 1857,
-  "Device Function": 150,
-  "Device Class": 40,
-  "Device Instance Lower": 0,
-  "Device Instance Upper": 0,
-  "System Instance": 0,
-  "Industry Group": 4,          // Marine
-  "Reserved1": 1,
-  "Reserved2": 2
+  uniqueNumber: 1751521,
+  manufacturerCode: 1857,
+  deviceFunction: 150,
+  deviceClass: 40,
+  deviceInstanceLower: 0,
+  deviceInstanceUpper: 0,
+  systemInstance: 0,
+  industryGroup: 4          // Marine
 }
 
 // Product info PGN
@@ -31,14 +29,14 @@ addressClaim = {
 productInfo = {
   pgn: 126996,
   dst: 255,
-  "NMEA 2000 Version": 1200,
-  "Product Code": 18846,
-  "Model ID": "AC12 Autopilot",
-  "Software Version Code": "1.3.03.00",
-  "Model Version": "",
-  "Model Serial Code": "014817",
-  "Certification Level": 1,
-  "Load Equivalency": 1
+  nmea2000Version: 1200,
+  productCode: 18846,
+  modelId: "AC12 Autopilot",
+  softwareVersionCode: "1.3.03.00",
+  modelVersion: "",
+  modelSerialCode: "014817",
+  certificationLevel: 1,
+  loadEquivalency: 1
 }
 
 const defaultTransmitPGNs = [
