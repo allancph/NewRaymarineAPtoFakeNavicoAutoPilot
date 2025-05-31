@@ -220,19 +220,31 @@ CanbusStream.prototype.sendPGN = function (msg) {
         buffer = toPgn(msg)
         pgn = msg
       } else {
-        pgn = parseActisense(msg)
-        canid = encodeCanId(pgn)
-        buffer = pgn.data
+        pgn = parseActisense(msg); // pgn here is the parsed object
+        if (!pgn || typeof pgn.pgn === 'undefined') { // Added check for parseActisense result
+          console.error(`[CanbusStream] ERROR: parseActisense failed for msg: ${msg}`);
+          return;
+        }
+        canid = encodeCanId(pgn);
+        buffer = pgn.data;
       }
 
-      if ( debug.enabled ) {
-        var str = toActisenseSerialFormat(pgn.pgn, buffer, pgn.dst, pgn.src)
-        debug(str)
+      if ( typeof buffer === 'undefined' ) { // Explicit check for undefined buffer
+          console.error(`[CanbusStream] ERROR: toPgn() returned undefined for PGN object: ${JSON.stringify(pgn)}`);
+          return;
       }
+
+      // Optional: keep the existing debug.enabled log if useful
+      if ( debug.enabled ) {
+        var str = toActisenseSerialFormat(pgn.pgn, buffer, pgn.dst, pgn.src);
+        debug(str);
+      }
+
+      console.log(`[CanbusStream] Attempting this.channel.send() for PGN: ${pgn.pgn}, Src: ${pgn.src}, Dst: ${pgn.dst}, BufLen: ${buffer.length}`); // ADD THIS LINE
 
       //seems as though 126720 should always be encoded this way
-      if ( buffer.length > 8 || pgn.pgn == 126720 ) {
-        var pgns = getPlainPGNs(buffer)
+      if ( buffer.length > 8 || pgn.pgn == 126720 ) { // This was the line 270 from the old TypeError
+        var pgns = getPlainPGNs(buffer); // Ensure getPlainPGNs is robust for undefined if buffer was problematic
         pgns.forEach(pbuffer => {
           this.channel.send({id: canid, ext:true, data: pbuffer})
         })

@@ -89,7 +89,8 @@ class CanDevice extends EventEmitter {
 
 function sendPGN(device, pgn, src, dest) {
   pgn.src = src || device.address;
-  debug('Sending PGN %j', pgn);
+  debug('Sending PGN %j', pgn); // Keep existing debug line
+  console.log(`[CanDevice] Attempting to send PGN via canbus.sendPGN: ${JSON.stringify(pgn)}`); // ADD THIS LINE
   device.canbus.sendPGN(pgn);
 }
 
