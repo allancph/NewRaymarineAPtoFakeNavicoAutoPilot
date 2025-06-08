@@ -31,6 +31,7 @@ const myEmulatedDevice = new CanDevice(canbus, {
   transmitPGNs: defaultTransmitPGNsFromConfig
 });
 myEmulatedDevice.start();
+console.log('[emulate.js] myEmulatedDevice.address is:', myEmulatedDevice.address, '(Type:', typeof myEmulatedDevice.address, ')');
 
 // These exports might be useful if other parts of your system require emulate.js
 module.exports.defaultTransmitPGNs = defaultTransmitPGNsFromConfig;
