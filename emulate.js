@@ -685,7 +685,7 @@ function mainLoop () {
     msg = canbus.read()
 		// debug('Received packet msg: %j', msg)
 	  // debug('msg.pgn.src %i != canbus.candevice.address %i?', msg.pgn.src, canbus.candevice.address)
-    if ( msg.pgn.dst == canbus.candevice.address || msg.pgn.dst == 255) {
+    if (msg && msg.pgn && (msg.pgn.dst == myEmulatedDevice.address || msg.pgn.dst == 255)) {
       msg.pgn.fields = {};
       if (msg.pgn.pgn == 59904) {
         PGN = msg.data[2] * 256 * 256 + msg.data[1] * 256 + msg.data[0];
