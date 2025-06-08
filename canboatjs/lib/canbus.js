@@ -54,7 +54,8 @@ function CanbusStream (options) {
   this.plainText = false
   this.reconnect = options.reconnect || true
   this.options = options
-  this.externalCanDevice = this.options.externalCanDevice === true; // ADDED
+  this.externalCanDevice = this.options.externalCanDevice === true;
+  console.log('[CanbusStream] Constructor options.externalCanDevice:', this.options.externalCanDevice, 'Resulting this.externalCanDevice:', this.externalCanDevice);
   this.start()
 
   const setProviderStatus = options.app && options.app.setProviderStatus

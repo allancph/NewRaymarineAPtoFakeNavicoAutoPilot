@@ -23,7 +23,7 @@ debug('Emulate type: %s, Device Address from cmd: %s', emulate, deviceAddressCmd
 
 console.log('[emulate.js] About to create canbus instance...');
 // Create the canbus instance (this uses the constructor from canboatjs/index.js)
-const canbus = new CanboatJSIndex.canbus({});
+const canbus = new CanboatJSIndex.canbus({ externalCanDevice: true });
 
 // Create and start your emulated device
 const myEmulatedDevice = new CanDevice(canbus, {
