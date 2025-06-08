@@ -88,9 +88,15 @@ class CanDevice extends EventEmitter {
 }
 
 function sendPGN(device, pgn, src, dest) {
-  pgn.src = src || device.address;
+  // Log state before pgn.src is defaulted
+  console.log(`[CanDevice] device.address=${device.address} (type ${typeof device.address}), pgn.src_before_default=${pgn.src}, For PGN: ${JSON.stringify(pgn)}`);
+
+  pgn.src = src || device.address; // This is the line that sets the source
+
+  // Log state after pgn.src is defaulted
+  console.log(`[CanDevice] FINAL pgn.src=${pgn.src}, Sending PGN: ${JSON.stringify(pgn)}`);
+
   debug('Sending PGN %j', pgn); // Keep existing debug line
-  console.log(`[CanDevice] Attempting to send PGN via canbus.sendPGN: ${JSON.stringify(pgn)}`); // ADD THIS LINE
   device.canbus.sendPGN(pgn);
 }
 
