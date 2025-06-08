@@ -54,6 +54,7 @@ function CanbusStream (options) {
   this.plainText = false
   this.reconnect = options.reconnect || true
   this.options = options
+  this.externalCanDevice = this.options.externalCanDevice === true; // ADDED
   this.start()
 
   const setProviderStatus = options.app && options.app.setProviderStatus
@@ -113,16 +114,18 @@ function CanbusStream (options) {
           this.socketCanWriter = null
         })
         setTimeout(() => {
-          this.candevice = new CanDevice(this, options)
-          this.candevice.start()
+          if (!this.externalCanDevice) { // ADD THIS IF
+            this.candevice = new CanDevice(this, options)
+            this.candevice.start()
+          }
         }, 5000)
       }
     })
   } else {
     try {
-      console.log('[CanbusStream] Trying to create raw channel:', canDevice); // ADD
+      console.log('[CanbusStream] Trying to create raw channel:', canDevice);
       this.channel = socketcan.createRawChannel(canDevice);
-      console.log('[CanbusStream] Raw channel created:', canDevice); // ADD
+      console.log('[CanbusStream] Raw channel created:', canDevice);
       this.channel.addListener('onMessage', (msg) => {
         var pgn = parseCanId(msg.id)
 
@@ -137,13 +140,17 @@ function CanbusStream (options) {
           that.push({ pgn, length: msg.data.length, data: msg.data })
         }
       });
-      console.log('[CanbusStream] Listener added. Starting channel...'); // ADD
+      console.log('[CanbusStream] Listener added. Starting channel...');
       this.channel.start();
-      console.log('[CanbusStream] Channel started. Creating CanDevice...'); // ADD
-      this.candevice = new CanDevice(this, options); // CanDevice is from require('./candevice')
-      console.log('[CanbusStream] CanDevice created. Starting CanDevice...'); // ADD
-      this.candevice.start();
-      console.log('[CanbusStream] CanDevice started.'); // ADD
+      console.log('[CanbusStream] Channel started.'); // Moved CanDevice creation down
+
+      if (!this.externalCanDevice) { // ADD THIS IF
+        console.log('[CanbusStream] Creating INTERNAL CanDevice...'); // MODIFIED LOG
+        this.candevice = new CanDevice(this, options);
+        console.log('[CanbusStream] INTERNAL CanDevice created. Starting it...'); // MODIFIED LOG
+        this.candevice.start();
+        console.log('[CanbusStream] INTERNAL CanDevice started.'); // MODIFIED LOG
+      }
       setProviderStatus('Connected')
     } catch (e) {
       setProviderError(e.message)
@@ -173,87 +180,73 @@ require('util').inherits(CanbusStream, Transform)
 CanbusStream.prototype.start = function () {
 }
 
-CanbusStream.prototype.sendPGN = function (msg) {
-  if ( this.candevice ) {
-    if ( !this.candevice.cansend && (_.isString(msg) || msg.pgn !== 59904) ) {
-      //we have not completed address claim yet
-      return
+CanbusStream.prototype.sendPGN = function (msg) { // msg can be an object or an Actisense string
+  let pgnObjectToSend;
+
+  if (_.isString(msg)) {
+    pgnObjectToSend = parseActisense(msg); // parseActisense is from ./stringMsg
+    if (!pgnObjectToSend || typeof pgnObjectToSend.pgn === 'undefined') {
+      console.error(`[CanbusStream] ERROR: parseActisense failed for string msg: ${msg}`);
+      return;
     }
-
-    debug('sending %j', msg)
-
-    let src = msg.pgn === 59904 ? msg.src : this.candevice.address
-
-    if ( _.isString(msg) ) {
-      var split = msg.split(',')
-      split[3] = src
-      msg = split.join(',')
-    } else {
-      msg.src = src
-      if ( _.isUndefined(msg.prio) ) {
-        msg.prio = 3
-      }
-      if ( _.isUndefined(msg.dst) ) {
-        msg.dst = 255
-      }
-    }
-
-    if ( this.socketCanWriter ) {
-      if ( _.isString(msg) ) {
-        this.socketCanWriter.stdin.write(msg + '\n')
-      } else {
-        var str = toActisenseSerialFormat(msg.pgn, toPgn(msg), msg.dst, msg.src)
-        this.socketCanWriter.stdin.write(str + '\n')
-      }
-    } else if (this.options.fromStdIn) {
-      // When fromStdIn is true, output JSON strings to stdout for Signal K
-      // 'pgn_object' here is the first argument to sendPGN, which should be the PGN data.
-      // In CanDevice, it calls this.canbus.sendPGN(pgn_object_to_send)
-      process.stdout.write(JSON.stringify(msg) + '\\n');
-    } else if ( this.channel  ) {
-      var canid
-      var buffer
-
-      var pgn
-      if ( _.isObject(msg) ) {
-        canid = encodeCanId(msg)
-        buffer = toPgn(msg)
-        pgn = msg
-      } else {
-        pgn = parseActisense(msg); // pgn here is the parsed object
-        if (!pgn || typeof pgn.pgn === 'undefined') { // Added check for parseActisense result
-          console.error(`[CanbusStream] ERROR: parseActisense failed for msg: ${msg}`);
-          return;
-        }
-        canid = encodeCanId(pgn);
-        buffer = pgn.data;
-      }
-
-      if ( typeof buffer === 'undefined' ) { // Explicit check for undefined buffer
-          console.error(`[CanbusStream] ERROR: toPgn() returned undefined for PGN object: ${JSON.stringify(pgn)}`);
-          return;
-      }
-
-      // Optional: keep the existing debug.enabled log if useful
-      if ( debug.enabled ) {
-        var str = toActisenseSerialFormat(pgn.pgn, buffer, pgn.dst, pgn.src);
-        debug(str);
-      }
-
-      console.log(`[CanbusStream] Attempting this.channel.send() for PGN: ${pgn.pgn}, Src: ${pgn.src}, Dst: ${pgn.dst}, BufLen: ${buffer.length}`); // ADD THIS LINE
-
-      //seems as though 126720 should always be encoded this way
-      if ( buffer.length > 8 || pgn.pgn == 126720 ) { // This was the line 270 from the old TypeError
-        var pgns = getPlainPGNs(buffer); // Ensure getPlainPGNs is robust for undefined if buffer was problematic
-        pgns.forEach(pbuffer => {
-          this.channel.send({id: canid, ext:true, data: pbuffer})
-        })
-      } else {
-        this.channel.send({id: canid, ext:true, data: buffer})
-      }
-    }
+  } else if (_.isObject(msg)) {
+    pgnObjectToSend = msg; // Assume it's a PGN object from an external CanDevice
+                           // Its .src should already be correctly set by the caller.
+  } else {
+    console.error(`[CanbusStream] ERROR: Unknown message type for sendPGN: ${typeof msg}`);
+    return;
   }
-}
+
+  // Ensure essential fields are present for encoding and logging
+  if (typeof pgnObjectToSend.pgn === 'undefined' || typeof pgnObjectToSend.src === 'undefined') {
+    console.error(`[CanbusStream] ERROR: PGN object to send is missing 'pgn' or 'src' field: ${JSON.stringify(pgnObjectToSend)}`);
+    return;
+  }
+  // Default dst if not present
+  if (typeof pgnObjectToSend.dst === 'undefined') {
+    pgnObjectToSend.dst = 255;
+  }
+
+  // Outputting / Sending Logic
+  if (this.options.fromStdIn) {
+    // In Signal K piped mode, output JSON to stdout
+    // The [CanDevice] log in candevice.js already shows the PGN object, so this can be just the write.
+    process.stdout.write(JSON.stringify(pgnObjectToSend) + '\n');
+  } else if (this.channel) { // Direct CAN mode (socketcan)
+    const canid = encodeCanId(pgnObjectToSend); // encodeCanId is from ./canId
+    const buffer = toPgn(pgnObjectToSend);      // toPgn is from ./toPgn
+
+    if (typeof buffer === 'undefined') {
+      console.error(`[CanbusStream] ERROR: toPgn() returned undefined for PGN object: ${JSON.stringify(pgnObjectToSend)}`);
+      return;
+    }
+
+    console.log(`[CanbusStream] Attempting this.channel.send() for PGN: ${pgnObjectToSend.pgn}, Src: ${pgnObjectToSend.src}, Dst: ${pgnObjectToSend.dst}, BufLen: ${buffer.length}`);
+
+    if (buffer.length > 8 || pgnObjectToSend.pgn == 126720) { // Handle multi-packet or specific PGNs
+      const pgnPackets = getPlainPGNs(buffer); // getPlainPGNs is from ./utilities
+      pgnPackets.forEach(pbuffer => {
+        this.channel.send({ id: canid, ext: true, data: pbuffer });
+      });
+    } else {
+      this.channel.send({ id: canid, ext: true, data: buffer });
+    }
+  } else if (this.socketCanWriter) {
+    // Fallback to socketCanWriter if fromStdIn is false & no direct channel
+    // Ensure toPgn and toActisenseSerialFormat are available
+    const dataBufferForWriter = toPgn(pgnObjectToSend);
+    if (typeof dataBufferForWriter === 'undefined') {
+      console.error(`[CanbusStream] ERROR (socketCanWriter): toPgn() returned undefined for PGN object: ${JSON.stringify(pgnObjectToSend)}`);
+      return;
+    }
+    const actisenseString = toActisenseSerialFormat(pgnObjectToSend.pgn, dataBufferForWriter, pgnObjectToSend.dst, pgnObjectToSend.src); // from ./stringMsg & ./toPgn
+    this.socketCanWriter.stdin.write(actisenseString + '\n');
+  } else {
+    // This case should ideally not be reached if constructor logic for direct mode is sound
+    // or if fromStdIn is true.
+    console.log(`[CanbusStream] No output channel/pipe for PGN: ${JSON.stringify(pgnObjectToSend)} (Not in fromStdIn mode, no this.channel, no this.socketCanWriter)`);
+  }
+};
 
 function readLine(that, line) {
   var candump_data_inc = CANDUMP_DATA_INC_3;
